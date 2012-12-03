@@ -1,4 +1,6 @@
 (ns scale-shedder.views
+  (:use [overtone.music.pitch])
+  (:use [scale-shedder core])
   (:use [hiccup core page]))
 
 (defn index-page []

@@ -1,5 +1,7 @@
 (ns scale-shedder.core
-    (:use [overtone.live]))
+    (:use [overtone.music.pitch]))
+
+(declare continue-scale-from-prev)
 
 (defn rotate-while
   "Rotates a collection left while (pred item) is true. Will return a
@@ -53,12 +55,12 @@
 (defn scale-within-range [scale &{:keys [start end] :or {start lownote end highnote} }]
   (vec (map find-note-name (scale-notes-below-tone (scale-notes-above-tone scale start) end))))
 
-(definst harpsichord [freq 440]
-  (let [duration 1]
-    (*
-      (line:kr 1 1 duration FREE)
-      (pluck (* (white-noise) (env-gen (perc 0.001 5) :action FREE))
-             1 1 (/ 1 freq) (* duration 2) 0.25))))
+;;(definst harpsichord [freq 440]
+;;  (let [duration 1]
+;;    (*
+;;      (line:kr 1 1 duration FREE)
+;;      (pluck (* (white-noise) (env-gen (perc 0.001 5) :action FREE))
+;;             1 1 (/ 1 freq) (* duration 2) 0.25))))
 
 (def all-the-scales (vec (shuffle (list :F :Gb :G :Ab :A :Bb :B :C :Db :D :Eb :E))))
 (map calculate-string-and-fret (->>
@@ -75,33 +77,3 @@
   (scale-from (scale-within-range (scale-field (nth all-the-scales 10) :major)) :prev-scale)
   (scale-from (scale-within-range (scale-field (nth all-the-scales 11) :major)) :prev-scale)))
 (println all-the-scales)
-
-(defn octave [midi-scale]
-  (map (fn [x] (+ 12 x)) midi-scale))
-
-(def melody
-  (let [pitches
-    (->>
-      (scale-from [:F1 :G1 :A1 :Bb1 :C2 :D2 :E2 :F2 :G2 :A2 :Bb2 :C3 :D3 :E3 :F3 :G3 :A3])
-      (scale-from [:F#1 :G#1 :A1 :B1 :C#2 :D2 :E2 :F#2 :G#2 :A2 :B2 :C#3 :D3 :E3 :F#3 :G#3 :A3] :prev-scale)
-      (scale-from [:F1 :G1 :Ab1 :Bb1 :C2 :D2 :Eb2 :F2 :G2 :Ab2 :Bb2 :C3 :D3 :Eb3 :F3 :G3 :Ab3] :prev-scale))
-    durations
-     (repeat (count pitches) 1)
-    times (reductions + 0 durations)]
-    (map vector times pitches)))
-
-(note :F3)
-
-(defn play [metro notes] 
-  (let [play-note (fn [[beat pitch]] (at (metro beat) (-> pitch note midi->hz harpsichord)))]
-    (dorun (map play-note notes)))) 
-
-(defn play-round [metro notes]
-  (let [after (fn [beats metro] (comp metro #(+ % beats)))]
-    (play metro notes)
-    (play (after 4 metro) notes)
-    (play (after 8 metro) notes)
-    (play (after 16 metro) notes)))
-
-(play (metronome 140) melody)
-;(play-round (metronome 120) melody)
