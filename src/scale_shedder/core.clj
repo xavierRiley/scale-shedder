@@ -46,6 +46,10 @@
   (last
     (find (zipmap fullrange stringmap) (note n))))
 
+(defn output-vextab [notes]
+  (map #(str "tabstave notation=true\n" "notes " % "\n") (map (partial clojure.string/join " ") 
+       (vec (partition 8 notes)))))
+
 (defn scale-notes-above-tone [scale note]
   (last (split-with (partial >= (dec note)) scale)))
 
@@ -63,17 +67,18 @@
 ;;             1 1 (/ 1 freq) (* duration 2) 0.25))))
 
 (def all-the-scales (vec (shuffle (list :F :Gb :G :Ab :A :Bb :B :C :Db :D :Eb :E))))
-(map calculate-string-and-fret (->>
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 0) :major)))
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 1) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 2) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 3) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 4) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 5) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 6) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 7) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 8) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 9) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 10) :major)) :prev-scale)
-  (scale-from (scale-within-range (scale-field (nth all-the-scales 11) :major)) :prev-scale)))
+(defn generate-scales []
+  (map calculate-string-and-fret (->>
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 0) :major)))
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 1) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 2) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 3) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 4) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 5) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 6) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 7) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 8) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 9) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 10) :major)) :prev-scale)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 11) :major)) :prev-scale))))
 (println all-the-scales)

@@ -19,8 +19,7 @@
        "artist" "me"
        "timeSignature" [4 4]
        "temp" 120
-       "vexTabCode" "sample"}}))
+       "vexTabCode" (output-vextab generate-scales)}}))
   (route/not-found "Not Found"))
 
-(def app
-  (handler/site app-routes))
+(def app  (handler/site app-routes))
