@@ -16,6 +16,11 @@
     (> penul final) :down
     (> final penul) :up)))
 
+;; so this is messed up
+;; It currently tries to continue from 32 beat patterns
+;; Which is not accurate
+;; It needs to calculate an upward arch and a downward arch
+;; rotate as necessary and then cycle that rotation
 (defn scale-from [n &{:keys [beats prev-scale] :or {beats 32} }]
   (let [current-scale (take beats (cycle (concat (vec n) (reverse (subvec (vec n) 1 (- (count n) 1))))))]
     (concat
@@ -68,7 +73,7 @@
 
 (def all-the-scales (vec (shuffle (list :F :Gb :G :Ab :A :Bb :B :C :Db :D :Eb :E))))
 (defn generate-scales []
-  (map calculate-string-and-fret (->>
+  (into [] (map calculate-string-and-fret (->>
     (scale-from (scale-within-range (scale-field (nth all-the-scales 0) :major)))
     (scale-from (scale-within-range (scale-field (nth all-the-scales 1) :major)) :prev-scale)
     (scale-from (scale-within-range (scale-field (nth all-the-scales 2) :major)) :prev-scale)
@@ -80,5 +85,4 @@
     (scale-from (scale-within-range (scale-field (nth all-the-scales 8) :major)) :prev-scale)
     (scale-from (scale-within-range (scale-field (nth all-the-scales 9) :major)) :prev-scale)
     (scale-from (scale-within-range (scale-field (nth all-the-scales 10) :major)) :prev-scale)
-    (scale-from (scale-within-range (scale-field (nth all-the-scales 11) :major)) :prev-scale))))
-(println all-the-scales)
+    (scale-from (scale-within-range (scale-field (nth all-the-scales 11) :major)) :prev-scale)))))

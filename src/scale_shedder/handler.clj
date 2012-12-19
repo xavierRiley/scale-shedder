@@ -9,17 +9,19 @@
 
 (defn json-response [data & [status]]
   {:status (or status 200)
-   :headers {"Content-Type" "application/json"}
-   :body (json/write-str data)})
+   :headers {
+       "Content-Type" "application/json"
+       "Access-Control-Allow-Origin" "*"}
+   :body (str "var songs = " (json/write-str data))})
 
 (defroutes app-routes
   (GET "/" [] 
     (json-response {"hello" 
-      {"title" "Title"
+      {"title" (reduce str all-the-scales)
        "artist" "me"
        "timeSignature" [4 4]
        "temp" 120
-       "vexTabCode" (output-vextab generate-scales)}}))
+       "vexTabCode" (output-vextab (generate-scales))}}))
   (route/not-found "Not Found"))
 
 (def app  (handler/site app-routes))
