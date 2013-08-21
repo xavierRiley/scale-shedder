@@ -16,6 +16,46 @@
     (> penul final) :down
     (> final penul) :up)))
 
+(defn make-saw
+  "Takes an ascending range and produces an ascending and descending
+   sequence of those nubmers"
+  [rng]
+  (concat (vec rng) (reverse (subvec (vec rng) 1 (- (count rng) 1)))))
+
+;; IDEAS
+(def master-range (make-saw (range lownote highnote)))
+(defn master-scale [saw]
+  (into [] (map-indexed
+            (fn [idx nt]
+              {
+               :index idx
+               :midi-note nt
+               :note-name (find-note-name nt)
+               :pitch-class (find-pitch-class-name nt)
+              })
+            (vec saw))))
+
+(defn pitch-set-for-scale [scale-range]
+  (set (map find-pitch-class-name scale-range)))
+
+(defn annotate-with-scale [saw pitch-set]
+  (map (fn [nt] (merge nt (if (contains? pitch-set (:pitch-class nt)) {:active true}))) saw))
+
+(def c-set (pitch-set-for-scale (scale :C4 :major)))
+(def ab-set (pitch-set-for-scale (scale :Ab4 :major)))
+(def eb-set (pitch-set-for-scale (scale :Eb4 :major)))
+(def e-set (pitch-set-for-scale (scale :E4 :major)))
+
+(defn scale-set [tone scale-type] (pitch-set-for-scale (scale tone scale-type)))
+(defn scale-saw [pitch-set] (filter (fn [x] (:active x)) (annotate-with-scale (master-scale master-range) pitch-set)))
+(defn scale-seq [pitch-set & {:keys [prev-scale note-count] :or {note-count 32}}]
+  (if (not (empty? prev-scale))
+    (concat prev-scale (take note-count (cycle (rotate-while (fn [x] (= (:index (last prev-scale)) (:index x))) (scale-saw pitch-set)))))
+    (take note-count (cycle (scale-saw pitch-set)))))
+
+;; THIS WORKS
+;;(scale-seq c-set :note-count 16 :prev-scale (scale-seq ab-set :note-count 16)
+
 ;; so this is messed up
 ;; It currently tries to continue from 32 beat patterns
 ;; Which is not accurate
@@ -52,7 +92,7 @@
     (find (zipmap fullrange stringmap) (note n))))
 
 (defn output-vextab [notes]
-  (map #(str "tabstave notation=true\n" "notes " % "\n") (map (partial clojure.string/join " ") 
+  (map #(str "tabstave notation=true\n" "notes " % "\n") (map (partial clojure.string/join " ")
        (vec (partition 8 notes)))))
 
 (defn scale-notes-above-tone [scale note]
