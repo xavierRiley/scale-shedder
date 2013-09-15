@@ -1,6 +1,25 @@
 (ns scale-shedder.core
     (:use [overtone.music.pitch]))
+(def lownote (note :F2))
+(def highnote (note :A4))
+(def note-count 16)
+(def fullrange (range lownote (inc highnote)))
+(def stringmap [
+    "1/6" "2/6" "3/6" "4/6" "5/6"
+    "1/5" "2/5" "3/5" "4/5" "5/5"
+    "1/4" "2/4" "3/4" "4/4" "5/4"
+    "1/3" "2/3" "3/3" "4/3"
+    "1/2" "2/2" "3/2" "4/2" "5/2"
+    "1/1" "2/1" "3/1" "4/1" "5/1"
+  ])
 
+(defn calculate-string-and-fret [n]
+  (last
+    (find (zipmap fullrange stringmap) (note n))))
+
+(defn output-vextab [notes]
+  (map #(str "tabstave notation=true\n" "notes " % "\n") (map (partial clojure.string/join " ")
+                                                              (vec (partition note-count notes)))))
 (declare continue-scale-from-prev)
 
 (defn rotate-while
@@ -23,7 +42,7 @@
   (concat (vec rng) (reverse (subvec (vec rng) 1 (- (count rng) 1)))))
 
 ;; IDEAS
-(def master-range (make-saw (range lownote highnote)))
+(def master-range (make-saw (range lownote (inc highnote))))
 (defn master-scale [saw]
   (into [] (map-indexed
             (fn [idx nt]
@@ -38,8 +57,14 @@
 (defn pitch-set-for-scale [scale-range]
   (set (map find-pitch-class-name scale-range)))
 
+(defn scale-dups [seq]
+  (for [[id freq] (frequencies (map :midi-note seq))  ;; get the frequencies, destructure
+        :when (> freq 1)]            ;; this is the filter condition
+   id))
+
 (defn annotate-with-scale [saw pitch-set]
-  (map (fn [nt] (merge nt (if (contains? pitch-set (:pitch-class nt)) {:active true}))) saw))
+  (map (fn [nt] (merge nt (if (and (contains? pitch-set (:pitch-class nt))
+                                  ()) {:active true}))) saw))
 
 (def c-set (pitch-set-for-scale (scale :C4 :major)))
 (def ab-set (pitch-set-for-scale (scale :Ab4 :major)))
@@ -47,14 +72,41 @@
 (def e-set (pitch-set-for-scale (scale :E4 :major)))
 
 (defn scale-set [tone scale-type] (pitch-set-for-scale (scale tone scale-type)))
-(defn scale-saw [pitch-set] (filter (fn [x] (:active x)) (annotate-with-scale (master-scale master-range) pitch-set)))
-(defn scale-seq [pitch-set & {:keys [prev-scale note-count] :or {note-count 32}}]
-  (if (not (empty? prev-scale))
-    (concat prev-scale (take note-count (cycle (rotate-while (fn [x] (= (:index (last prev-scale)) (:index x))) (scale-saw pitch-set)))))
-    (take note-count (cycle (scale-saw pitch-set)))))
+(defn scale-saw [pitch-set] (map first (partition-by (fn [x] (:note-name x))
+                                                     (filter
+                                                      (fn [x] (:active x))
+                                                      (annotate-with-scale (master-scale master-range) pitch-set)))))
+(defn next-index [x]
+  (cond
+   (= x 0) 1
+   (= x (:index (last (master-scale master-range)))) 0
+   :else (inc x)))
 
-;; THIS WORKS
-;;(scale-seq c-set :note-count 16 :prev-scale (scale-seq ab-set :note-count 16)
+(defn not-equal-to [x y]
+  (if (= x y) nil true))
+
+(defn scale-seq
+  ([pitch-set] (take note-count (cycle (scale-saw pitch-set))))
+  ([pitch-set prev-scale] (concat prev-scale
+                                  (take note-count
+                                        (cycle
+                                          (rotate-while
+                                           (fn [x] (< (:index x) (next-index (:index (last prev-scale)))))
+                                           (scale-saw pitch-set)))))))
+
+;; (defn filter-consecutive [coll]
+;; (when-let [[f & r] (seq coll)]
+;; (if (= f (first r))
+;;  (filter-consecutive r)
+;;  (cons f (filter-consecutive r)))))
+
+;; THIS WORKS - I think
+(println (output-vextab (map calculate-string-and-fret
+                             (vec (map :note-name
+                                       (scale-seq e-set
+                                                  (scale-seq ab-set
+                                                             (scale-seq c-set
+                                                                        (scale-seq eb-set)))))))))
 
 ;; so this is messed up
 ;; It currently tries to continue from 32 beat patterns
@@ -75,25 +127,6 @@
       (rotate-while (fn [x] (>= (note x) (note last-note))) (scale-from current-scale))
       (rotate-while (fn [x] (>= (note x) (note last-note))) (scale-from (reverse current-scale)) ))))
 
-(def lownote (note :F2))
-(def highnote (note :A4))
-(def fullrange (range lownote highnote))
-(def stringmap [
-    "1/6" "2/6" "3/6" "4/6" "5/6"
-    "1/5" "2/5" "3/5" "4/5" "5/5"
-    "1/4" "2/4" "3/4" "4/4" "5/4"
-    "1/3" "2/3" "3/3" "4/3"
-    "1/2" "2/2" "3/2" "4/2" "5/2"
-    "1/1" "2/1" "3/1" "4/1" "5/1"
-  ])
-
-(defn calculate-string-and-fret [n]
-  (last
-    (find (zipmap fullrange stringmap) (note n))))
-
-(defn output-vextab [notes]
-  (map #(str "tabstave notation=true\n" "notes " % "\n") (map (partial clojure.string/join " ")
-       (vec (partition 8 notes)))))
 
 (defn scale-notes-above-tone [scale note]
   (last (split-with (partial >= (dec note)) scale)))
